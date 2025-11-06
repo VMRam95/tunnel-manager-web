@@ -14,8 +14,8 @@
     <style>
         [x-cloak] { display: none !important; }
         .status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             display: inline-block;
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -26,71 +26,251 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="tunnelManager()" x-init="init()">
-    <div class="container mx-auto px-4 py-8 max-w-7xl">
+<body class="bg-gray-900 min-h-screen" x-data="tunnelManager()" x-init="init()">
+    <!-- Modal Container -->
+    <div x-data="modalManager()" x-init="init()">
+        <!-- Backdrop -->
+        <div
+            x-show="isOpen"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 bg-black bg-opacity-70 z-50"
+            @click="onCancel()"
+            style="display: none;">
+        </div>
+
+        <!-- Modal -->
+        <div
+            x-show="isOpen"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-95"
+            x-transition:enter-end="opacity-100 transform scale-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 transform scale-100"
+            x-transition:leave-end="opacity-0 transform scale-95"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style="display: none;">
+
+            <!-- Confirmation Modal -->
+            <div x-show="modalType === 'confirm'" class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-700" @click.stop>
+                <div class="flex items-start gap-4 mb-4">
+                    <div :class="getColorClasses()" class="text-4xl flex-shrink-0" x-text="getIcon()"></div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-100 mb-2" x-text="title"></h3>
+                        <p class="text-gray-400" x-text="message"></p>
+                    </div>
+                </div>
+                <div class="flex gap-3 justify-end mt-6">
+                    <button @click="onCancel()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors">
+                        <span x-text="cancelText"></span>
+                    </button>
+                    <button @click="onConfirm()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                        <span x-text="confirmText"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Info Modal -->
+            <div x-show="modalType === 'info'" class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-6 border border-gray-700 max-h-[90vh] overflow-y-auto" @click.stop>
+                <div class="flex items-start justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gray-100" x-text="title"></h3>
+                    <button @click="close()" class="text-gray-400 hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div x-show="infoData" class="space-y-4">
+                    <!-- Status Section -->
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-300 mb-3">Status</h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-gray-500">Status:</span>
+                                <span class="ml-2 text-gray-200 font-medium" x-text="infoData?.status"></span>
+                            </div>
+                            <div x-show="infoData?.pid">
+                                <span class="text-gray-500">PID:</span>
+                                <span class="ml-2 text-gray-200" x-text="infoData?.pid"></span>
+                            </div>
+                            <div x-show="infoData?.uptime">
+                                <span class="text-gray-500">Uptime:</span>
+                                <span class="ml-2 text-gray-200" x-text="infoData?.uptime"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ports Section -->
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-300 mb-3">Ports</h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-gray-500">Local Port:</span>
+                                <span class="ml-2 text-blue-400 font-mono" x-text="infoData?.local_port"></span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Remote Port:</span>
+                                <span class="ml-2 text-blue-400 font-mono" x-text="infoData?.remote_port"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AWS Configuration -->
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-300 mb-3">AWS Configuration</h4>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <span class="text-gray-500">Host:</span>
+                                <div class="mt-1 p-2 bg-gray-800 rounded font-mono text-xs text-gray-300 break-all" x-text="infoData?.host"></div>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Profile:</span>
+                                <div class="mt-1 p-2 bg-gray-800 rounded font-mono text-xs text-gray-300" x-text="infoData?.profile"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-gray-500">Region:</span>
+                                    <span class="ml-2 text-gray-200" x-text="infoData?.region"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Environment:</span>
+                                    <span class="ml-2 text-gray-200" x-text="infoData?.env"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Instance Tag:</span>
+                                <div class="mt-1 p-2 bg-gray-800 rounded font-mono text-xs text-gray-300" x-text="infoData?.instance_tag"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connection String -->
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-300 mb-3">Connection String</h4>
+                        <div class="relative">
+                            <div class="p-3 bg-gray-800 rounded font-mono text-xs text-green-400 break-all pr-10" x-text="getConnectionString()"></div>
+                            <button
+                                @click="copyToClipboard(getConnectionString())"
+                                class="absolute top-2 right-2 p-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                                title="Copy to clipboard">
+                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Replace credentials with your actual username and password</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button @click="close()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div
+        x-data="toastManager()"
+        @show-toast.window="show($event.detail.message, $event.detail.type, $event.detail.duration)"
+        class="fixed top-4 right-4 z-50 space-y-2"
+        style="max-width: 400px;">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div
+                x-show="true"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform translate-x-8"
+                x-transition:enter-end="opacity-100 transform translate-x-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 transform translate-x-0"
+                x-transition:leave-end="opacity-0 transform translate-x-8"
+                :class="getColorClasses(toast.type)"
+                class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white cursor-pointer"
+                @click="remove(toast.id)">
+                <span class="text-xl font-bold" x-text="getIcon(toast.type)"></span>
+                <span class="flex-1 text-sm" x-text="toast.message"></span>
+                <button @click.stop="remove(toast.id)" class="text-white hover:text-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </template>
+    </div>
+
+    <div class="container mx-auto px-3 py-3 max-w-7xl">
         <!-- Header -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="bg-gray-800 rounded-lg shadow-lg p-4 mb-3 border border-gray-700">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">🔌 Tunnel Manager</h1>
-                    <p class="text-gray-600">Manage AWS SSM Tunnels for DEV, PRE, and PRO</p>
+                    <h1 class="text-2xl font-bold text-gray-100 mb-1">🔌 Tunnel Manager</h1>
+                    <p class="text-sm text-gray-400">Manage AWS SSM Tunnels for DEV, PRE, and PRO</p>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex gap-2">
                     <button
                         @click="refresh()"
-                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                        class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
                         :disabled="loading">
-                        <svg class="w-5 h-5" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
                         Refresh
                     </button>
                     <button
                         @click="stopAll()"
-                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                        class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
                         :disabled="loading">
-                        <svg x-show="loading" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg x-show="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Stop All
                     </button>
+                    <button
+                        @click="quit()"
+                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Quit
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Alerts -->
-        <div x-show="message" x-cloak class="mb-6">
-            <div :class="messageType === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-green-100 border-green-400 text-green-700'"
-                 class="border px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline" x-text="message"></span>
-                <button @click="message = ''" class="absolute top-0 right-0 px-4 py-3">
-                    <svg class="fill-current h-6 w-6" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
         <!-- DEV Environment -->
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span class="text-yellow-500">●</span> DEV
+        <div class="mb-3">
+            <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
+                <span class="text-yellow-400">●</span> DEV
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <template x-for="service in ['db', 'mongo', 'redis', 'rabbitmq']" :key="service">
                     <div x-data="tunnelCard('dev', service)">
-                        <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow">
-                            <div class="flex justify-between items-start mb-3">
+                        <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                            <div class="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800" x-text="name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="':' + local_port"></p>
+                                    <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                    <p class="text-xs text-gray-400" x-text="':' + local_port"></p>
                                 </div>
-                                <div class="status-indicator"
-                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
+                                <div class="flex items-center gap-2">
+                                    <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="status-indicator"
+                                         :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
+                                </div>
                             </div>
 
-                            <div class="mb-4 text-sm text-gray-600" x-show="status === 'running'">
+                            <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
                                 <p>PID: <span x-text="pid"></span></p>
                                 <p x-show="uptime_seconds">
                                     Uptime: <span x-text="formatUptime(uptime_seconds)"></span>
@@ -100,9 +280,9 @@
                             <button
                                 @click="toggleTunnel()"
                                 :disabled="loading"
-                                :class="status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
-                                class="w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <svg x-show="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                                class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                                <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
@@ -115,24 +295,31 @@
         </div>
 
         <!-- PRE Environment -->
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span class="text-blue-500">●</span> PRE
+        <div class="mb-3">
+            <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
+                <span class="text-blue-400">●</span> PRE
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <template x-for="service in ['db', 'mongo', 'redis', 'rabbitmq']" :key="service">
                     <div x-data="tunnelCard('pre', service)">
-                        <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow">
-                            <div class="flex justify-between items-start mb-3">
+                        <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                            <div class="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800" x-text="name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="':' + local_port"></p>
+                                    <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                    <p class="text-xs text-gray-400" x-text="':' + local_port"></p>
                                 </div>
-                                <div class="status-indicator"
-                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
+                                <div class="flex items-center gap-2">
+                                    <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="status-indicator"
+                                         :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
+                                </div>
                             </div>
 
-                            <div class="mb-4 text-sm text-gray-600" x-show="status === 'running'">
+                            <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
                                 <p>PID: <span x-text="pid"></span></p>
                                 <p x-show="uptime_seconds">
                                     Uptime: <span x-text="formatUptime(uptime_seconds)"></span>
@@ -142,9 +329,9 @@
                             <button
                                 @click="toggleTunnel()"
                                 :disabled="loading"
-                                :class="status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
-                                class="w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <svg x-show="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                                class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                                <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
@@ -157,24 +344,31 @@
         </div>
 
         <!-- PRO Environment -->
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span class="text-red-500">●</span> PRO
+        <div class="mb-3">
+            <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
+                <span class="text-red-400">●</span> PRO
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <template x-for="service in ['db', 'mongo', 'rabbitmq']" :key="service">
                     <div x-data="tunnelCard('pro', service)">
-                        <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow">
-                            <div class="flex justify-between items-start mb-3">
+                        <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                            <div class="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800" x-text="name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="':' + local_port"></p>
+                                    <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                    <p class="text-xs text-gray-400" x-text="':' + local_port"></p>
                                 </div>
-                                <div class="status-indicator"
-                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
+                                <div class="flex items-center gap-2">
+                                    <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="status-indicator"
+                                         :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
+                                </div>
                             </div>
 
-                            <div class="mb-4 text-sm text-gray-600" x-show="status === 'running'">
+                            <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
                                 <p>PID: <span x-text="pid"></span></p>
                                 <p x-show="uptime_seconds">
                                     Uptime: <span x-text="formatUptime(uptime_seconds)"></span>
@@ -184,9 +378,9 @@
                             <button
                                 @click="toggleTunnel()"
                                 :disabled="loading"
-                                :class="status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
-                                class="w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <svg x-show="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                                class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                                <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
@@ -199,19 +393,19 @@
         </div>
 
         <!-- Orphaned Tunnels -->
-        <div x-show="orphaned.length > 0" x-cloak class="mb-6">
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                <div class="flex items-center mb-3">
-                    <h3 class="text-lg font-semibold text-yellow-800">
+        <div x-show="orphaned.length > 0" x-cloak class="mb-3">
+            <div class="bg-yellow-900 bg-opacity-20 border-l-4 border-yellow-500 p-3 rounded-lg">
+                <div class="flex items-center mb-2">
+                    <h3 class="text-base font-semibold text-yellow-400">
                         ⚠️ Orphaned Tunnels (<span x-text="orphaned.length"></span>)
                     </h3>
                 </div>
                 <div class="space-y-2">
                     <template x-for="tunnel in orphaned" :key="tunnel.pid">
-                        <div class="flex justify-between items-center bg-white p-3 rounded">
-                            <div class="text-sm">
+                        <div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700">
+                            <div class="text-xs text-gray-300">
                                 <span class="font-semibold" x-text="tunnel.env || 'UNKNOWN'"></span>
-                                <span class="text-gray-600">Port: <span x-text="tunnel.port || 'unknown'"></span></span>
+                                <span class="text-gray-400">Port: <span x-text="tunnel.port || 'unknown'"></span></span>
                                 <span class="text-gray-500">(PID: <span x-text="tunnel.pid"></span>)</span>
                             </div>
                         </div>
@@ -221,12 +415,22 @@
         </div>
 
         <!-- Footer -->
-        <div class="text-center text-gray-500 text-sm mt-8">
+        <div class="text-center text-gray-400 text-xs mt-4">
             <p>Last updated: <span x-text="lastUpdate"></span></p>
-            <p class="mt-1">Auto-refresh every 5 seconds</p>
+            <div class="mt-2 flex items-center justify-center gap-2">
+                <label for="refreshInterval" class="text-gray-400">Auto-refresh every:</label>
+                <select
+                    id="refreshInterval"
+                    @change="changeRefreshInterval(parseInt($event.target.value))"
+                    class="px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                    <template x-for="option in refreshOptions" :key="option.value">
+                        <option :value="option.value" :selected="option.value === autoRefreshSeconds" x-text="option.label"></option>
+                    </template>
+                </select>
+            </div>
         </div>
     </div>
 
-    <script src="/assets/app.js"></script>
+    <script src="/assets/app.js?v=1730892200"></script>
 </body>
 </html>
