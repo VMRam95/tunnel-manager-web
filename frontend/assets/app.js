@@ -95,33 +95,33 @@ function tunnelCard(env, service) {
         env,
         service,
         loading: false,
+        name: SERVICES[env][service].name,
+        local_port: SERVICES[env][service].local_port,
+        status: 'stopped',
+        pid: null,
+        uptime_seconds: null,
 
-        get tunnel() {
-            const tunnelId = `${this.env}_${this.service}`;
-            const tracked = this.$root.tunnels.tracked || [];
-            const foundTunnel = tracked.find(t => t.id === tunnelId);
+        init() {
+            // Update state every 100ms
+            setInterval(() => {
+                const tunnelId = `${this.env}_${this.service}`;
+                const tracked = this.$root.tunnels?.tracked || [];
+                const foundTunnel = tracked.find(t => t.id === tunnelId);
 
-            if (foundTunnel) {
-                return {
-                    name: SERVICES[env][service].name,
-                    local_port: SERVICES[env][service].local_port,
-                    status: foundTunnel.status,
-                    pid: foundTunnel.pid,
-                    uptime_seconds: foundTunnel.uptime_seconds
-                };
-            } else {
-                return {
-                    name: SERVICES[env][service].name,
-                    local_port: SERVICES[env][service].local_port,
-                    status: 'stopped',
-                    pid: null,
-                    uptime_seconds: null
-                };
-            }
+                if (foundTunnel) {
+                    this.status = foundTunnel.status;
+                    this.pid = foundTunnel.pid;
+                    this.uptime_seconds = foundTunnel.uptime_seconds;
+                } else {
+                    this.status = 'stopped';
+                    this.pid = null;
+                    this.uptime_seconds = null;
+                }
+            }, 100);
         },
 
         async toggleTunnel() {
-            if (this.tunnel.status === 'running') {
+            if (this.status === 'running') {
                 await this.stopTunnel();
             } else {
                 await this.startTunnel();
@@ -145,13 +145,13 @@ function tunnelCard(env, service) {
                 const data = await response.json();
 
                 if (data.success) {
-                    this.$root.showMessage(`${this.tunnel.name} tunnel started successfully`, 'success');
+                    this.$root.showMessage(`${this.name} tunnel started successfully`, 'success');
                     await this.$root.refresh();
                 } else {
-                    this.$root.showMessage(`Failed to start ${this.tunnel.name}: ${data.message}`, 'error');
+                    this.$root.showMessage(`Failed to start ${this.name}: ${data.message}`, 'error');
                 }
             } catch (error) {
-                this.$root.showMessage(`Error starting ${this.tunnel.name}: ${error.message}`, 'error');
+                this.$root.showMessage(`Error starting ${this.name}: ${error.message}`, 'error');
             } finally {
                 this.loading = false;
             }
@@ -174,13 +174,13 @@ function tunnelCard(env, service) {
                 const data = await response.json();
 
                 if (data.success) {
-                    this.$root.showMessage(`${this.tunnel.name} tunnel stopped`, 'success');
+                    this.$root.showMessage(`${this.name} tunnel stopped`, 'success');
                     await this.$root.refresh();
                 } else {
-                    this.$root.showMessage(`Failed to stop ${this.tunnel.name}: ${data.message}`, 'error');
+                    this.$root.showMessage(`Failed to stop ${this.name}: ${data.message}`, 'error');
                 }
             } catch (error) {
-                this.$root.showMessage(`Error stopping ${this.tunnel.name}: ${error.message}`, 'error');
+                this.$root.showMessage(`Error stopping ${this.name}: ${error.message}`, 'error');
             } finally {
                 this.loading = false;
             }

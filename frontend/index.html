@@ -79,26 +79,26 @@
                         <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800" x-text="tunnel.name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="':' + tunnel.local_port"></p>
+                                    <h3 class="text-lg font-semibold text-gray-800" x-text="name"></h3>
+                                    <p class="text-sm text-gray-500" x-text="':' + local_port"></p>
                                 </div>
                                 <div class="status-indicator"
-                                     :class="tunnel.status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
                             </div>
 
-                            <div class="mb-4 text-sm text-gray-600" x-show="tunnel.status === 'running'">
-                                <p>PID: <span x-text="tunnel.pid"></span></p>
-                                <p x-show="tunnel.uptime_seconds">
-                                    Uptime: <span x-text="formatUptime(tunnel.uptime_seconds)"></span>
+                            <div class="mb-4 text-sm text-gray-600" x-show="status === 'running'">
+                                <p>PID: <span x-text="pid"></span></p>
+                                <p x-show="uptime_seconds">
+                                    Uptime: <span x-text="formatUptime(uptime_seconds)"></span>
                                 </p>
                             </div>
 
                             <button
                                 @click="toggleTunnel()"
                                 :disabled="loading"
-                                :class="tunnel.status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
+                                :class="status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
                                 class="w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50">
-                                <span x-text="tunnel.status === 'running' ? 'Stop' : 'Start'"></span>
+                                <span x-text="status === 'running' ? 'Stop' : 'Start'"></span>
                             </button>
                         </div>
                     </div>
@@ -117,26 +117,26 @@
                         <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800" x-text="tunnel.name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="':' + tunnel.local_port"></p>
+                                    <h3 class="text-lg font-semibold text-gray-800" x-text="name"></h3>
+                                    <p class="text-sm text-gray-500" x-text="':' + local_port"></p>
                                 </div>
                                 <div class="status-indicator"
-                                     :class="tunnel.status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
                             </div>
 
-                            <div class="mb-4 text-sm text-gray-600" x-show="tunnel.status === 'running'">
-                                <p>PID: <span x-text="tunnel.pid"></span></p>
-                                <p x-show="tunnel.uptime_seconds">
-                                    Uptime: <span x-text="formatUptime(tunnel.uptime_seconds)"></span>
+                            <div class="mb-4 text-sm text-gray-600" x-show="status === 'running'">
+                                <p>PID: <span x-text="pid"></span></p>
+                                <p x-show="uptime_seconds">
+                                    Uptime: <span x-text="formatUptime(uptime_seconds)"></span>
                                 </p>
                             </div>
 
                             <button
                                 @click="toggleTunnel()"
                                 :disabled="loading"
-                                :class="tunnel.status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
+                                :class="status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
                                 class="w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50">
-                                <span x-text="tunnel.status === 'running' ? 'Stop' : 'Start'"></span>
+                                <span x-text="status === 'running' ? 'Stop' : 'Start'"></span>
                             </button>
                         </div>
                     </div>
@@ -155,26 +155,26 @@
                         <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800" x-text="tunnel.name"></h3>
-                                    <p class="text-sm text-gray-500" x-text="':' + tunnel.local_port"></p>
+                                    <h3 class="text-lg font-semibold text-gray-800" x-text="name"></h3>
+                                    <p class="text-sm text-gray-500" x-text="':' + local_port"></p>
                                 </div>
                                 <div class="status-indicator"
-                                     :class="tunnel.status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-300'"></div>
                             </div>
 
-                            <div class="mb-4 text-sm text-gray-600" x-show="tunnel.status === 'running'">
-                                <p>PID: <span x-text="tunnel.pid"></span></p>
-                                <p x-show="tunnel.uptime_seconds">
-                                    Uptime: <span x-text="formatUptime(tunnel.uptime_seconds)"></span>
+                            <div class="mb-4 text-sm text-gray-600" x-show="status === 'running'">
+                                <p>PID: <span x-text="pid"></span></p>
+                                <p x-show="uptime_seconds">
+                                    Uptime: <span x-text="formatUptime(uptime_seconds)"></span>
                                 </p>
                             </div>
 
                             <button
                                 @click="toggleTunnel()"
                                 :disabled="loading"
-                                :class="tunnel.status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
+                                :class="status === 'running' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
                                 class="w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50">
-                                <span x-text="tunnel.status === 'running' ? 'Stop' : 'Start'"></span>
+                                <span x-text="status === 'running' ? 'Stop' : 'Start'"></span>
                             </button>
                         </div>
                     </div>
