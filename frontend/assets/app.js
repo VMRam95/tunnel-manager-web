@@ -104,9 +104,13 @@ function tunnelCard(env, service) {
         },
 
         init() {
+            // Initial update
+            this.updateTunnelState(this.$root.tunnels);
+
+            // Watch for changes with deep observation
             this.$watch('$root.tunnels', (value) => {
                 this.updateTunnelState(value);
-            });
+            }, { deep: true });
         },
 
         updateTunnelState(tunnelsData) {
