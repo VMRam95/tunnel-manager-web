@@ -61,6 +61,15 @@ async def serve_app_js():
     )
 
 
+@app.get("/favicon.svg")
+async def serve_favicon():
+    """Serve the favicon"""
+    favicon_path = PROJECT_ROOT / "frontend" / "favicon.svg"
+    if not favicon_path.exists():
+        raise HTTPException(status_code=404, detail="Favicon not found")
+    return FileResponse(favicon_path, media_type="image/svg+xml")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     """Serve the frontend HTML"""
