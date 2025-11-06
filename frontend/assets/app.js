@@ -51,6 +51,9 @@ function tunnelManager() {
                 this.tunnels = data;
                 this.orphaned = data.orphaned || [];
                 this.lastUpdate = new Date().toLocaleTimeString();
+
+                // Dispatch event to notify all cards
+                window.dispatchEvent(new CustomEvent('tunnels-updated', { detail: data }));
             } catch (error) {
                 this.showMessage('Error fetching tunnels: ' + error.message, 'error');
             } finally {
@@ -102,10 +105,10 @@ function tunnelCard(env, service) {
         uptime_seconds: null,
 
         init() {
-            // Update state every 100ms
-            setInterval(() => {
+            // Listen for tunnel updates
+            window.addEventListener('tunnels-updated', (event) => {
                 const tunnelId = `${this.env}_${this.service}`;
-                const tracked = this.$root.tunnels?.tracked || [];
+                const tracked = event.detail?.tracked || [];
                 const foundTunnel = tracked.find(t => t.id === tunnelId);
 
                 if (foundTunnel) {
@@ -117,7 +120,7 @@ function tunnelCard(env, service) {
                     this.pid = null;
                     this.uptime_seconds = null;
                 }
-            }, 100);
+            });
         },
 
         async toggleTunnel() {
