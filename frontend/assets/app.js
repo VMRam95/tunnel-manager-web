@@ -148,6 +148,10 @@ function tunnelCard(env, service) {
                 const data = await response.json();
 
                 if (data.success) {
+                    // Update local state immediately
+                    this.status = 'running';
+                    this.pid = data.pid;
+
                     this.$root.showMessage(`${this.name} tunnel started successfully`, 'success');
                     await this.$root.refresh();
                 } else {
@@ -177,6 +181,11 @@ function tunnelCard(env, service) {
                 const data = await response.json();
 
                 if (data.success) {
+                    // Update local state immediately
+                    this.status = 'stopped';
+                    this.pid = null;
+                    this.uptime_seconds = null;
+
                     this.$root.showMessage(`${this.name} tunnel stopped`, 'success');
                     await this.$root.refresh();
                 } else {
