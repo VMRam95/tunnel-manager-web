@@ -90,7 +90,7 @@ TUNNEL_CONFIGS = {
             "mongo": {
                 "name": "MongoDB",
                 "remote_port": "27017",
-                "local_port": "27027",
+                "local_port": "24017",
                 "host": "aws-docdb-clstr-off-inb-pro.cluster-c522iagi0n4g.eu-central-1.docdb.amazonaws.com"
             },
             "rabbitmq": {
