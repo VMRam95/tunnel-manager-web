@@ -95,39 +95,24 @@ function tunnelCard(env, service) {
         env,
         service,
         loading: false,
-        tunnel: {
-            name: SERVICES[env][service].name,
-            local_port: SERVICES[env][service].local_port,
-            status: 'stopped',
-            pid: null,
-            uptime_seconds: null
-        },
 
-        init() {
-            // Initial update
-            this.updateTunnelState(this.$root.tunnels);
-
-            // Watch for changes with deep observation
-            this.$watch('$root.tunnels', (value) => {
-                this.updateTunnelState(value);
-            }, { deep: true });
-        },
-
-        updateTunnelState(tunnelsData) {
+        get tunnel() {
             const tunnelId = `${this.env}_${this.service}`;
-            const tracked = tunnelsData.tracked || [];
+            const tracked = this.$root.tunnels.tracked || [];
             const foundTunnel = tracked.find(t => t.id === tunnelId);
 
             if (foundTunnel) {
-                this.tunnel = {
-                    ...this.tunnel,
+                return {
+                    name: SERVICES[env][service].name,
+                    local_port: SERVICES[env][service].local_port,
                     status: foundTunnel.status,
                     pid: foundTunnel.pid,
                     uptime_seconds: foundTunnel.uptime_seconds
                 };
             } else {
-                this.tunnel = {
-                    ...this.tunnel,
+                return {
+                    name: SERVICES[env][service].name,
+                    local_port: SERVICES[env][service].local_port,
                     status: 'stopped',
                     pid: null,
                     uptime_seconds: null
