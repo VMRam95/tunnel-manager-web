@@ -2,7 +2,7 @@
 FastAPI application for Tunnel Manager Web
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -36,11 +36,29 @@ app = FastAPI(
 # Get project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
-# Mount static files
-app.mount("/assets", StaticFiles(directory=PROJECT_ROOT / "frontend" / "assets"), name="assets")
-
 # Initialize tunnel manager
 tunnel_manager = TunnelManager()
+
+
+@app.get("/assets/app.js")
+async def serve_app_js():
+    """Serve app.js with no-cache headers"""
+    js_path = PROJECT_ROOT / "frontend" / "assets" / "app.js"
+    if not js_path.exists():
+        raise HTTPException(status_code=404, detail="app.js not found")
+
+    with open(js_path, 'r') as f:
+        content = f.read()
+
+    return Response(
+        content=content,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -52,6 +70,10 @@ async def serve_frontend():
 
     with open(html_path, 'r') as f:
         return HTMLResponse(content=f.read())
+
+
+# Mount static files (after specific routes)
+app.mount("/assets", StaticFiles(directory=PROJECT_ROOT / "frontend" / "assets"), name="assets")
 
 
 @app.get("/api/tunnels", response_model=TunnelListResponse)
@@ -137,6 +159,26 @@ async def stop_all_tunnels():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "tunnel-manager-web"}
+
+
+@app.post("/api/shutdown")
+async def shutdown():
+    """Shutdown the server gracefully"""
+    import os
+    import signal
+
+    logger.info("Shutdown requested - stopping server")
+
+    # Schedule shutdown after response is sent
+    def shutdown_server():
+        import time
+        time.sleep(0.5)  # Give time for response to be sent
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    import threading
+    threading.Thread(target=shutdown_server, daemon=True).start()
+
+    return {"success": True, "message": "Server shutting down"}
 
 
 if __name__ == "__main__":
