@@ -9,6 +9,7 @@ from pathlib import Path
 import logging
 
 from .tunnel_manager import TunnelManager
+from .k8s_manager import K8sPortForwardManager
 from .models import (
     TunnelListResponse,
     StartTunnelRequest,
@@ -36,8 +37,9 @@ app = FastAPI(
 # Get project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
-# Initialize tunnel manager
+# Initialize managers
 tunnel_manager = TunnelManager()
+k8s_manager = K8sPortForwardManager()
 
 
 @app.get("/assets/app.js")
@@ -188,6 +190,115 @@ async def shutdown():
     threading.Thread(target=shutdown_server, daemon=True).start()
 
     return {"success": True, "message": "Server shutting down"}
+
+
+# ============================================================================
+# Kubernetes Port-Forward Endpoints
+# ============================================================================
+
+@app.get("/api/k8s/pods")
+async def list_k8s_pods():
+    """List all pods from configured environments"""
+    try:
+        pods_by_env = {
+            'dev': k8s_manager.list_pods('dev'),
+            'pre': k8s_manager.list_pods('pre'),
+            'pro': k8s_manager.list_pods('pro')
+        }
+        return {"pods": pods_by_env}
+    except Exception as e:
+        logger.error(f"Error listing K8s pods: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/k8s/port-forward/start")
+async def start_k8s_port_forward(request: dict):
+    """Start a Kubernetes port-forward"""
+    try:
+        env = request.get('env')
+        pod_type = request.get('pod_type')
+        pod_name = request.get('pod_name')
+        local_port = request.get('local_port')
+        remote_port = request.get('remote_port')
+
+        if not all([env, pod_type, pod_name, local_port, remote_port]):
+            raise HTTPException(status_code=400, detail="Missing required fields")
+
+        success, message, pid = k8s_manager.start_port_forward(
+            env, pod_type, pod_name, local_port, remote_port
+        )
+
+        if success:
+            logger.info(f"Started K8s port-forward: {env}/{pod_type} on port {local_port}")
+            return {
+                "success": True,
+                "message": message,
+                "pid": pid,
+                "local_port": local_port
+            }
+        else:
+            raise HTTPException(status_code=400, detail=message)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting K8s port-forward: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/k8s/port-forward/stop")
+async def stop_k8s_port_forward(request: dict):
+    """Stop a Kubernetes port-forward"""
+    try:
+        env = request.get('env')
+        pod_type = request.get('pod_type')
+
+        if not env or not pod_type:
+            raise HTTPException(status_code=400, detail="Missing env or pod_type")
+
+        success, message = k8s_manager.stop_port_forward(env, pod_type)
+
+        if success:
+            logger.info(f"Stopped K8s port-forward: {env}/{pod_type}")
+
+        return {
+            "success": success,
+            "message": message
+        }
+
+    except Exception as e:
+        logger.error(f"Error stopping K8s port-forward: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/k8s/port-forward/stop-all")
+async def stop_all_k8s_port_forwards():
+    """Stop all Kubernetes port-forwards"""
+    try:
+        stopped_count, errors = k8s_manager.stop_all_forwards()
+
+        logger.info(f"Stopped {stopped_count} K8s port-forward(s)")
+
+        return {
+            "success": True,
+            "stopped_count": stopped_count,
+            "errors": errors
+        }
+
+    except Exception as e:
+        logger.error(f"Error stopping all K8s port-forwards: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/k8s/port-forwards")
+async def list_k8s_port_forwards():
+    """List all active K8s port-forwards"""
+    try:
+        forwards = k8s_manager.get_all_forwards()
+        return {"forwards": forwards}
+    except Exception as e:
+        logger.error(f"Error listing K8s port-forwards: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
