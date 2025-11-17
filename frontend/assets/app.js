@@ -88,6 +88,31 @@ const SERVICES = {
     }
 };
 
+// K8s configurations matching backend k8s_config.py
+const K8S_CONFIGS = {
+    'dev': {
+        'invoice-producer': {
+            name: 'Invoice Producer',
+            default_port: '8086',
+            suggested_local_port: '8080'
+        }
+    },
+    'pre': {
+        'invoice-producer': {
+            name: 'Invoice Producer',
+            default_port: '8086',
+            suggested_local_port: '8080'
+        }
+    },
+    'pro': {
+        'invoice-producer': {
+            name: 'Invoice Producer',
+            default_port: '8086',
+            suggested_local_port: '8080'
+        }
+    }
+};
+
 // Global modal instance (will be set when modal component initializes)
 window.showModal = null;
 window.showInfoModal = null;
@@ -236,6 +261,10 @@ function toastManager() {
 // Main tunnel manager component
 function tunnelManager() {
     return {
+        // Tab management
+        activeTab: 'tunnels', // 'tunnels' or 'k8s'
+
+        // Tunnels data
         tunnels: { tracked: [], orphaned: [] },
         orphaned: [],
         loading: false,
@@ -251,9 +280,21 @@ function tunnelManager() {
             { value: 300, label: '5 minutes' }
         ],
 
+        // K8s data
+        k8sPods: { dev: [], pre: [], pro: [] },
+        k8sForwards: { dev: [], pre: [], pro: [] },
+        k8sLoading: false,
+
         async init() {
             await this.refresh(true);
             this.startAutoRefresh();
+        },
+
+        setActiveTab(tab) {
+            this.activeTab = tab;
+            if (tab === 'k8s') {
+                this.refreshK8s();
+            }
         },
 
         startAutoRefresh() {
@@ -365,6 +406,133 @@ function tunnelManager() {
                 // Ignore errors as server might already be down
                 window.close();
             }
+        },
+
+        // K8s Methods
+        async refreshK8s() {
+            this.k8sLoading = true;
+            try {
+                // Fetch pods
+                const podsResponse = await fetch('/api/k8s/pods');
+                if (!podsResponse.ok) throw new Error('Failed to fetch K8s pods');
+                const podsData = await podsResponse.json();
+                this.k8sPods = podsData.pods;
+
+                // Fetch active forwards
+                const forwardsResponse = await fetch('/api/k8s/port-forwards');
+                if (!forwardsResponse.ok) throw new Error('Failed to fetch K8s port-forwards');
+                const forwardsData = await forwardsResponse.json();
+                this.k8sForwards = forwardsData.forwards;
+
+                // Dispatch event to notify all K8s pod cards
+                window.dispatchEvent(new CustomEvent('k8s-pods-updated', {
+                    detail: {
+                        pods: this.k8sPods,
+                        forwards: this.k8sForwards
+                    }
+                }));
+
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: 'Error fetching K8s data: ' + error.message, type: 'error' }
+                }));
+            } finally {
+                this.k8sLoading = false;
+            }
+        },
+
+        async startK8sForward(env, podType, podName, localPort, remotePort) {
+            try {
+                const response = await fetch('/api/k8s/port-forward/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        env,
+                        pod_type: podType,
+                        pod_name: podName,
+                        local_port: localPort,
+                        remote_port: remotePort
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: data.message, type: 'success' }
+                    }));
+                    // Individual pod cards handle their own state updates
+                } else {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: data.detail || 'Failed to start port-forward', type: 'error' }
+                    }));
+                }
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: 'Error: ' + error.message, type: 'error' }
+                }));
+            }
+        },
+
+        async stopK8sForward(env, podType) {
+            try {
+                const response = await fetch('/api/k8s/port-forward/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ env, pod_type: podType })
+                });
+
+                const data = await response.json();
+
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: data.message, type: data.success ? 'success' : 'error' }
+                }));
+
+                // Individual pod cards handle their own state updates
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: 'Error: ' + error.message, type: 'error' }
+                }));
+            }
+        },
+
+        async stopAllK8sForwards() {
+            const confirmed = await window.showModal({
+                title: 'Stop All Port-Forwards',
+                message: 'Are you sure you want to stop all active K8s port-forwards?',
+                confirmText: 'Stop All',
+                cancelText: 'Cancel',
+                type: 'danger'
+            });
+
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch('/api/k8s/port-forward/stop-all', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: `Stopped ${data.stopped_count} port-forward(s)`, type: 'success' }
+                    }));
+                    await this.refreshK8s();
+                }
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: 'Error: ' + error.message, type: 'error' }
+                }));
+            }
+        },
+
+        formatUptime(seconds) {
+            if (!seconds) return '';
+            if (seconds < 60) return `${seconds}s`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+            return `${Math.floor(seconds / 86400)}d`;
         }
     };
 }
@@ -507,6 +675,7 @@ function tunnelCard(env, service) {
             window.showInfoModal({
                 title: `${this.name} - ${this.env.toUpperCase()}`,
                 data: {
+                    type: 'tunnel',
                     name: this.name,
                     env: this.env.toUpperCase(),
                     service: this.service,
@@ -519,6 +688,162 @@ function tunnelCard(env, service) {
                     profile: envConfig.profile,
                     region: envConfig.region,
                     instance_tag: envConfig.instance_tag
+                }
+            });
+        }
+    };
+}
+
+// Individual K8s pod card component
+function k8sPodCard(env, podType, podConfig) {
+    return {
+        env,
+        podType,
+        name: podConfig.name,
+        defaultPort: podConfig.default_port,
+        suggestedLocalPort: podConfig.suggested_local_port,
+        loading: false,
+        status: 'stopped',
+        pid: null,
+        localPort: null,
+        podName: null,
+
+        init() {
+            // Listen for K8s pods updates
+            window.addEventListener('k8s-pods-updated', (event) => {
+                const podsData = event.detail?.pods || {};
+                const forwardsData = event.detail?.forwards || {};
+
+                // Get pods for this environment
+                const envPods = podsData[this.env] || [];
+
+                // Find the pod for this type
+                const foundPod = envPods.find(p => p.pod_type === this.podType);
+                if (foundPod) {
+                    this.podName = foundPod.pod_name;
+                }
+
+                // Check if there's an active forward for this pod type
+                const envForwards = forwardsData[this.env] || [];
+                const activeForward = envForwards.find(f => f.pod_type === this.podType);
+
+                if (activeForward) {
+                    this.status = 'running';
+                    this.pid = activeForward.pid;
+                    this.localPort = activeForward.local_port;
+                } else {
+                    this.status = 'stopped';
+                    this.pid = null;
+                    this.localPort = null;
+                }
+            });
+        },
+
+        async toggleForward() {
+            if (this.status === 'running') {
+                await this.stopForward();
+            } else {
+                await this.startForward();
+            }
+        },
+
+        async startForward() {
+            if (!this.podName) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: `No ${this.name} pod found in ${this.env.toUpperCase()}`, type: 'error' }
+                }));
+                return;
+            }
+
+            this.loading = true;
+            try {
+                const response = await fetch('/api/k8s/port-forward/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        env: this.env,
+                        pod_type: this.podType,
+                        pod_name: this.podName,
+                        local_port: this.suggestedLocalPort,
+                        remote_port: this.defaultPort
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update local state immediately
+                    this.status = 'running';
+                    this.pid = data.pid;
+                    this.localPort = data.local_port;
+
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: `${this.name} port-forward started on port ${data.local_port}`, type: 'success' }
+                    }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: data.detail || `Failed to start ${this.name} port-forward`, type: 'error' }
+                    }));
+                }
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: `Error starting ${this.name}: ${error.message}`, type: 'error' }
+                }));
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async stopForward() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/k8s/port-forward/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        env: this.env,
+                        pod_type: this.podType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update local state immediately
+                    this.status = 'stopped';
+                    this.pid = null;
+                    this.localPort = null;
+
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: `${this.name} port-forward stopped`, type: 'success' }
+                    }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: data.message || `Failed to stop ${this.name}`, type: 'error' }
+                    }));
+                }
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: `Error stopping ${this.name}: ${error.message}`, type: 'error' }
+                }));
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        showInfo() {
+            window.showInfoModal({
+                title: `${this.name} - ${this.env.toUpperCase()}`,
+                data: {
+                    type: 'k8s',
+                    name: this.name,
+                    env: this.env.toUpperCase(),
+                    pod_type: this.podType,
+                    pod_name: this.podName,
+                    status: this.status,
+                    pid: this.pid,
+                    local_port: this.localPort || this.suggestedLocalPort,
+                    remote_port: this.defaultPort
                 }
             });
         }
