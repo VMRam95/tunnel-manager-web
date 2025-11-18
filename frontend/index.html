@@ -478,143 +478,167 @@
                 </button>
             </div>
 
-            <!-- DEV Environment -->
-            <div class="mb-3">
-                <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
-                    <span class="text-yellow-400">●</span> DEV
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div x-data="k8sPodCard('dev', 'invoice-producer', K8S_CONFIGS.dev['invoice-producer'])">
-                        <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
-                                    <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
+            <!-- All K8s Resources in Single Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- DEV Invoice Producer -->
+                <div x-data="k8sPodCard('dev', 'invoice-producer', K8S_CONFIGS.dev['invoice-producer'])">
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 bg-yellow-400/10 text-yellow-400 text-xs font-semibold rounded">DEV</span>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                        </svg>
-                                    </button>
-                                    <div class="status-indicator"
-                                         :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
-                                </div>
+                                <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
                             </div>
-
-                            <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
-                                <p>PID: <span x-text="pid"></span></p>
-                                <p>Local Port: <span x-text="localPort"></span></p>
+                            <div class="flex items-center gap-2">
+                                <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </button>
+                                <div class="status-indicator"
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
                             </div>
-
-                            <button
-                                @click="toggleForward()"
-                                :disabled="loading || !podName"
-                                :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
-                                class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span x-text="status === 'running' ? 'Stop' : (podName ? 'Start' : 'Loading...')"></span>
-                            </button>
                         </div>
+                        <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
+                            <p>PID: <span x-text="pid"></span></p>
+                            <p>Local Port: <span x-text="localPort"></span></p>
+                        </div>
+                        <button
+                            @click="toggleForward()"
+                            :disabled="loading || !dataLoaded || !podName"
+                            :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                            class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="status === 'running' ? 'Stop' : (dataLoaded && podName ? 'Start' : 'Loading...')"></span>
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- PRE Environment -->
-            <div class="mb-3">
-                <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
-                    <span class="text-blue-400">●</span> PRE
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div x-data="k8sPodCard('pre', 'invoice-producer', K8S_CONFIGS.pre['invoice-producer'])">
-                        <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
-                                    <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
+                <!-- PRE Invoice Producer -->
+                <div x-data="k8sPodCard('pre', 'invoice-producer', K8S_CONFIGS.pre['invoice-producer'])">
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 bg-blue-400/10 text-blue-400 text-xs font-semibold rounded">PRE</span>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                        </svg>
-                                    </button>
-                                    <div class="status-indicator"
-                                         :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
-                                </div>
+                                <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
                             </div>
-
-                            <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
-                                <p>PID: <span x-text="pid"></span></p>
-                                <p>Local Port: <span x-text="localPort"></span></p>
+                            <div class="flex items-center gap-2">
+                                <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </button>
+                                <div class="status-indicator"
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
                             </div>
-
-                            <button
-                                @click="toggleForward()"
-                                :disabled="loading || !podName"
-                                :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
-                                class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span x-text="status === 'running' ? 'Stop' : (podName ? 'Start' : 'Loading...')"></span>
-                            </button>
                         </div>
+                        <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
+                            <p>PID: <span x-text="pid"></span></p>
+                            <p>Local Port: <span x-text="localPort"></span></p>
+                        </div>
+                        <button
+                            @click="toggleForward()"
+                            :disabled="loading || !dataLoaded || !podName"
+                            :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                            class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="status === 'running' ? 'Stop' : (dataLoaded && podName ? 'Start' : 'Loading...')"></span>
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- PRO Environment -->
-            <div class="mb-3">
-                <h2 class="text-xl font-bold text-gray-100 mb-2 flex items-center gap-2">
-                    <span class="text-red-400">●</span> PRO
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div x-data="k8sPodCard('pro', 'invoice-producer', K8S_CONFIGS.pro['invoice-producer'])">
-                        <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
-                                    <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
+                <!-- PRO Invoice Producer -->
+                <div x-data="k8sPodCard('pro', 'invoice-producer', K8S_CONFIGS.pro['invoice-producer'])">
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 bg-red-400/10 text-red-400 text-xs font-semibold rounded">PRO</span>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                        </svg>
-                                    </button>
-                                    <div class="status-indicator"
-                                         :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
-                                </div>
+                                <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
                             </div>
-
-                            <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
-                                <p>PID: <span x-text="pid"></span></p>
-                                <p>Local Port: <span x-text="localPort"></span></p>
+                            <div class="flex items-center gap-2">
+                                <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </button>
+                                <div class="status-indicator"
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
                             </div>
-
-                            <button
-                                @click="toggleForward()"
-                                :disabled="loading || !podName"
-                                :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
-                                class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span x-text="status === 'running' ? 'Stop' : (podName ? 'Start' : 'Loading...')"></span>
-                            </button>
                         </div>
+                        <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
+                            <p>PID: <span x-text="pid"></span></p>
+                            <p>Local Port: <span x-text="localPort"></span></p>
+                        </div>
+                        <button
+                            @click="toggleForward()"
+                            :disabled="loading || !dataLoaded || !podName"
+                            :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                            class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="status === 'running' ? 'Stop' : (dataLoaded && podName ? 'Start' : 'Loading...')"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grafana (Logs) -->
+                <div x-data="k8sPodCard('shared', 'grafana', K8S_CONFIGS.shared['grafana'])">
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-3 hover:shadow-xl transition-shadow border border-gray-700">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2 py-0.5 bg-purple-400/10 text-purple-400 text-xs font-semibold rounded">LOGS</span>
+                                </div>
+                                <h3 class="text-base font-semibold text-gray-100" x-text="name"></h3>
+                                <p class="text-xs text-gray-400" x-text="':' + suggestedLocalPort"></p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="showInfo()" class="text-gray-400 hover:text-blue-400 transition-colors" title="View details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </button>
+                                <div class="status-indicator"
+                                     :class="status === 'running' ? 'bg-green-500' : 'bg-gray-600'"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2 text-xs text-gray-400" x-show="status === 'running'">
+                            <p>PID: <span x-text="pid"></span></p>
+                            <p>Local Port: <span x-text="localPort"></span></p>
+                        </div>
+                        <button
+                            @click="toggleForward()"
+                            :disabled="loading || !dataLoaded || !podName"
+                            :class="status === 'running' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'"
+                            class="w-full px-3 py-1.5 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg x-show="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="status === 'running' ? 'Stop' : (dataLoaded && podName ? 'Start' : 'Loading...')"></span>
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Loading indicator -->
-            <div x-show="k8sLoading" class="text-center text-gray-400 p-4">
+            <div x-show="k8sLoading" class="text-center text-gray-400 p-4 mt-4">
                 Loading K8s data...
             </div>
         </div> <!-- End K8s Port-Forward Tab -->

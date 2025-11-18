@@ -94,21 +94,33 @@ const K8S_CONFIGS = {
         'invoice-producer': {
             name: 'Invoice Producer',
             default_port: '8086',
-            suggested_local_port: '8080'
+            suggested_local_port: '8080',
+            resource_kind: 'pod'
         }
     },
     'pre': {
         'invoice-producer': {
             name: 'Invoice Producer',
             default_port: '8086',
-            suggested_local_port: '8080'
+            suggested_local_port: '8080',
+            resource_kind: 'pod'
         }
     },
     'pro': {
         'invoice-producer': {
             name: 'Invoice Producer',
             default_port: '8086',
-            suggested_local_port: '8080'
+            suggested_local_port: '8080',
+            resource_kind: 'pod'
+        }
+    },
+    'shared': {
+        'grafana': {
+            name: 'Grafana',
+            default_port: '80',
+            suggested_local_port: '3000',
+            resource_kind: 'service',
+            service_name: 'ss-grafana'
         }
     }
 };
@@ -702,11 +714,16 @@ function k8sPodCard(env, podType, podConfig) {
         name: podConfig.name,
         defaultPort: podConfig.default_port,
         suggestedLocalPort: podConfig.suggested_local_port,
+        resourceKind: podConfig.resource_kind || 'pod',
         loading: false,
         status: 'stopped',
         pid: null,
         localPort: null,
-        podName: null,
+        // For services, set podName immediately from config (service_name)
+        // For pods, it will be set from k8s-pods-updated event
+        podName: (podConfig.resource_kind === 'service' && podConfig.service_name) ? podConfig.service_name : null,
+        // Flag to track if initial data has been loaded (for consistent "Loading..." display)
+        dataLoaded: false,
 
         init() {
             // Listen for K8s pods updates
@@ -714,16 +731,19 @@ function k8sPodCard(env, podType, podConfig) {
                 const podsData = event.detail?.pods || {};
                 const forwardsData = event.detail?.forwards || {};
 
-                // Get pods for this environment
-                const envPods = podsData[this.env] || [];
+                // Mark data as loaded after first event
+                this.dataLoaded = true;
 
-                // Find the pod for this type
-                const foundPod = envPods.find(p => p.pod_type === this.podType);
-                if (foundPod) {
-                    this.podName = foundPod.pod_name;
+                // Get resources for this environment
+                const envResources = podsData[this.env] || [];
+
+                // Find the resource for this type
+                const foundResource = envResources.find(p => p.pod_type === this.podType);
+                if (foundResource) {
+                    this.podName = foundResource.pod_name;
                 }
 
-                // Check if there's an active forward for this pod type
+                // Check if there's an active forward for this resource type
                 const envForwards = forwardsData[this.env] || [];
                 const activeForward = envForwards.find(f => f.pod_type === this.podType);
 
@@ -748,7 +768,8 @@ function k8sPodCard(env, podType, podConfig) {
         },
 
         async startForward() {
-            if (!this.podName) {
+            // For services, podName is the service name and is always available
+            if (!this.podName && this.resourceKind !== 'service') {
                 window.dispatchEvent(new CustomEvent('show-toast', {
                     detail: { message: `No ${this.name} pod found in ${this.env.toUpperCase()}`, type: 'error' }
                 }));
