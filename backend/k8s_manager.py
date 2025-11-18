@@ -106,19 +106,43 @@ class K8sPortForwardManager:
         self.state = K8sForwardState()
 
     def list_pods(self, env: str) -> List[Dict]:
-        """List all pods for an environment"""
+        """List all resources (pods and services) for an environment"""
         env_config = K8S_CONFIGS.get(env)
         if not env_config:
             return []
 
         context = env_config['context']
-        namespace = env_config['namespace']
-        pods_config = env_config['pods']
+        resources_config = env_config['resources']
 
-        all_pods = []
+        all_resources = []
 
-        for pod_type, pod_info in pods_config.items():
-            prefix = pod_info['prefix']
+        for resource_type, resource_info in resources_config.items():
+            resource_kind = resource_info['type']
+            namespace = resource_info['namespace']
+
+            # For services, we don't need to list pods - just return the config
+            if resource_kind == 'service':
+                # Check if port-forward is active
+                forward = self.state.get_forward(env, resource_type)
+                is_forwarding = forward is not None and self.state.is_forward_active(env, resource_type)
+
+                resource_data = {
+                    "pod_type": resource_type,  # Keep same key for compatibility
+                    "pod_name": resource_info['service_name'],  # Service name
+                    "display_name": resource_info['name'],
+                    "status": "Available",  # Services are always available
+                    "age": "N/A",
+                    "default_port": resource_info['default_port'],
+                    "suggested_local_port": resource_info['suggested_local_port'],
+                    "is_forwarding": is_forwarding,
+                    "forward_info": forward if is_forwarding else None,
+                    "resource_kind": "service"
+                }
+                all_resources.append(resource_data)
+                continue
+
+            # For pods, list them using kubectl
+            prefix = resource_info['prefix']
 
             # Get pods matching prefix
             cmd = [
@@ -154,27 +178,28 @@ class K8sPortForwardManager:
                                         pass
 
                                 # Check if port-forward is active
-                                forward = self.state.get_forward(env, pod_type)
-                                is_forwarding = forward is not None and forward.get('pod_name') == pod_name and self.state.is_forward_active(env, pod_type)
+                                forward = self.state.get_forward(env, resource_type)
+                                is_forwarding = forward is not None and forward.get('pod_name') == pod_name and self.state.is_forward_active(env, resource_type)
 
                                 pod_data = {
-                                    "pod_type": pod_type,
+                                    "pod_type": resource_type,
                                     "pod_name": pod_name,
-                                    "display_name": pod_info['name'],
+                                    "display_name": resource_info['name'],
                                     "status": status,
                                     "age": age,
-                                    "default_port": pod_info['default_port'],
-                                    "suggested_local_port": pod_info['suggested_local_port'],
+                                    "default_port": resource_info['default_port'],
+                                    "suggested_local_port": resource_info['suggested_local_port'],
                                     "is_forwarding": is_forwarding,
-                                    "forward_info": forward if is_forwarding else None
+                                    "forward_info": forward if is_forwarding else None,
+                                    "resource_kind": "pod"
                                 }
-                                all_pods.append(pod_data)
+                                all_resources.append(pod_data)
             except subprocess.TimeoutExpired:
                 pass
             except Exception as e:
                 pass
 
-        return all_pods
+        return all_resources
 
     def start_port_forward(self, env: str, pod_type: str, pod_name: str, local_port: str, remote_port: str) -> Tuple[bool, str, Optional[int]]:
         """Start a port-forward"""
@@ -188,15 +213,27 @@ class K8sPortForwardManager:
             return False, f"Invalid environment: {env}", None
 
         context = env_config['context']
-        namespace = env_config['namespace']
 
-        # Build kubectl command
+        # Get resource configuration
+        resource_config = env_config['resources'].get(pod_type)
+        if not resource_config:
+            return False, f"Invalid resource type: {pod_type}", None
+
+        namespace = resource_config['namespace']
+        resource_kind = resource_config['type']
+
+        # Build kubectl command based on resource type
+        if resource_kind == 'service':
+            resource_target = f'service/{pod_name}'
+        else:
+            resource_target = f'pod/{pod_name}'
+
         cmd = [
             'kubectl',
             '--context', context,
             'port-forward',
             '-n', namespace,
-            f'pod/{pod_name}',
+            resource_target,
             f'{local_port}:{remote_port}'
         ]
 
