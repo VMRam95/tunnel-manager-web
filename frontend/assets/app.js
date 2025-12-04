@@ -54,7 +54,7 @@ const SERVICES = {
             name: 'Redis',
             local_port: '6579',
             remote_port: '6379',
-            host: 'aws-redis-clstr-rg-off-inb-pre.1ihnfa.ng.0001.euc1.cache.amazonaws.com'
+            host: 'master.aws-redis-clstr-off-inb-pre.1ihnfa.euc1.cache.amazonaws.com'
         },
         rabbitmq: {
             name: 'RabbitMQ',
